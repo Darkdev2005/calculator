@@ -56,7 +56,14 @@ class CalculatorWebSocketHandler
         $this->send($connection, [
             'type' => 'connection.ready',
             'message' => 'Authenticated WebSocket connection established.',
+            'capabilities' => [
+                'operations' => ['add', 'subtract', 'multiply', 'divide', 'power', 'modulo'],
+                'precision' => ['min' => 0, 'max' => 10],
+                'actions' => ['calculate', 'history', 'history.clear', 'stats', 'ping'],
+            ],
         ]);
+
+        $this->handleStats($connection, $user->id);
     }
 
     public function onMessage(TcpConnection $connection, string $payload): void
@@ -98,6 +105,8 @@ class CalculatorWebSocketHandler
         match ($action) {
             'calculate' => $this->handleCalculate($userId, $message),
             'history' => $this->handleHistory($connection, $userId, $message),
+            'history.clear' => $this->handleClearHistory($userId),
+            'stats' => $this->handleStats($connection, $userId),
             'ping' => $this->send($connection, ['type' => 'pong']),
             default => $this->send($connection, [
                 'type' => 'calculation.error',
@@ -132,6 +141,7 @@ class CalculatorWebSocketHandler
                 (string) ($message['operation'] ?? ''),
                 $message['left'] ?? null,
                 $message['right'] ?? null,
+                $message['precision'] ?? null,
             );
         } catch (CalculatorException $exception) {
             $this->broadcastToUser($userId, [
@@ -155,6 +165,8 @@ class CalculatorWebSocketHandler
             'type' => 'calculation.result',
             'entry' => $this->formatHistoryEntry($history),
         ]);
+
+        $this->broadcastStats($userId);
     }
 
     /**
@@ -179,6 +191,46 @@ class CalculatorWebSocketHandler
         ]);
     }
 
+    private function handleClearHistory(int $userId): void
+    {
+        CalculationHistory::query()->where('user_id', $userId)->delete();
+
+        $this->broadcastToUser($userId, [
+            'type' => 'history.snapshot',
+            'entries' => [],
+        ]);
+
+        $this->broadcastToUser($userId, [
+            'type' => 'history.cleared',
+            'message' => 'History has been cleared.',
+        ]);
+
+        $this->broadcastStats($userId);
+    }
+
+    private function handleStats(TcpConnection $connection, int $userId): void
+    {
+        $this->send($connection, [
+            'type' => 'stats.snapshot',
+            'stats' => $this->buildStats($userId),
+        ]);
+    }
+
+    private function buildStats(int $userId): array
+    {
+        $latest = CalculationHistory::query()
+            ->where('user_id', $userId)
+            ->orderByDesc('calculated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        return [
+            'total_operations' => CalculationHistory::query()->where('user_id', $userId)->count(),
+            'latest_result' => $latest ? (float) $latest->result : null,
+            'latest_calculated_at' => $latest?->calculated_at?->toIso8601String(),
+        ];
+    }
+
     private function formatHistoryEntry(CalculationHistory $history): array
     {
         return [
@@ -189,6 +241,14 @@ class CalculatorWebSocketHandler
             'result' => (float) $history->result,
             'calculated_at' => $history->calculated_at?->toIso8601String(),
         ];
+    }
+
+    private function broadcastStats(int $userId): void
+    {
+        $this->broadcastToUser($userId, [
+            'type' => 'stats.snapshot',
+            'stats' => $this->buildStats($userId),
+        ]);
     }
 
     private function broadcastToUser(int $userId, array $payload): void

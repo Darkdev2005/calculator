@@ -55,6 +55,41 @@ class CalculatorServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_calculates_power(): void
+    {
+        $result = $this->service->calculate('power', 2, 5);
+
+        $this->assertSame(32.0, $result['result']);
+        $this->assertSame('^', $result['symbol']);
+    }
+
+    #[Test]
+    public function it_calculates_modulo(): void
+    {
+        $result = $this->service->calculate('modulo', 10, 3);
+
+        $this->assertSame(1.0, $result['result']);
+        $this->assertSame('%', $result['symbol']);
+    }
+
+    #[Test]
+    public function it_applies_result_precision(): void
+    {
+        $result = $this->service->calculate('divide', 10, 3, 2);
+
+        $this->assertSame(3.33, $result['result']);
+    }
+
+    #[Test]
+    public function it_rejects_invalid_precision(): void
+    {
+        $this->expectException(CalculatorException::class);
+        $this->expectExceptionMessage('Precision must be an integer between 0 and 10.');
+
+        $this->service->calculate('divide', 10, 3, 99);
+    }
+
+    #[Test]
     public function it_rejects_division_by_zero(): void
     {
         $this->expectException(CalculatorException::class);
@@ -64,11 +99,20 @@ class CalculatorServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_rejects_modulo_by_zero(): void
+    {
+        $this->expectException(CalculatorException::class);
+        $this->expectExceptionMessage('Modulo by zero is not allowed.');
+
+        $this->service->calculate('modulo', 8, 0);
+    }
+
+    #[Test]
     public function it_rejects_invalid_operation(): void
     {
         $this->expectException(CalculatorException::class);
 
-        $this->service->calculate('power', 8, 2);
+        $this->service->calculate('powering', 8, 2);
     }
 
     #[Test]

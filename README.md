@@ -13,10 +13,12 @@ Authenticated real-time calculator built with Laravel and Vue 3. Calculation ope
 
 - Authentication required for calculator access
 - Secure WebSocket authentication token bound to logged-in user
-- Supported operations: addition, subtraction, multiplication, division
-- Validation and error handling (invalid input, division by zero)
+- Supported operations: addition, subtraction, multiplication, division, power, modulo
+- Validation and error handling (invalid input, division/modulo by zero, invalid precision)
 - Per-user persistent calculation history in database
 - Real-time result/history updates across same user's open sessions
+- Precision control (`0..10`) for rounded results
+- Extra realtime actions: history clear and stats snapshot
 
 ## Database schema
 
@@ -116,9 +118,10 @@ Client -> server messages:
 ```json
 {
   "action": "calculate",
-  "operation": "add|subtract|multiply|divide",
+  "operation": "add|subtract|multiply|divide|power|modulo",
   "left": 12,
-  "right": 4
+  "right": 4,
+  "precision": 2
 }
 ```
 
@@ -131,6 +134,22 @@ Client -> server messages:
 }
 ```
 
+- Clear history:
+
+```json
+{
+  "action": "history.clear"
+}
+```
+
+- Get stats:
+
+```json
+{
+  "action": "stats"
+}
+```
+
 Server -> client messages:
 
 - `connection.ready`
@@ -138,6 +157,8 @@ Server -> client messages:
 - `calculation.result`
 - `calculation.error`
 - `history.snapshot`
+- `history.cleared`
+- `stats.snapshot`
 
 ## Tests
 
@@ -150,8 +171,10 @@ php artisan test --testsuite=Unit
 Included edge cases:
 
 - division by zero
+- modulo by zero
 - invalid operation
 - non-numeric operands
+- invalid precision
 
 ## Security notes
 
