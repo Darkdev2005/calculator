@@ -21,6 +21,7 @@ Authenticated real-time calculator built with Laravel and Vue 3. Calculation ope
 - Extra realtime actions: history clear and stats snapshot
 - Section-based calculations (default section: `Kundalik harajatlarim`)
 - Note support for each calculation entry
+- Standard form-style chained calculator UI (result can continue as next left operand)
 
 ## Database schema
 

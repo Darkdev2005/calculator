@@ -30,6 +30,9 @@ const note = ref('');
 const operation = ref('add');
 const result = ref(null);
 
+const chainMode = ref(true);
+const chainSteps = ref([]);
+
 const history = ref([]);
 const stats = ref({
     section: null,
@@ -50,6 +53,7 @@ const operations = [
 const canSend = computed(() => connectionState.value === 'connected');
 const hasHistory = computed(() => history.value.length > 0);
 const activeSection = computed(() => sections.value.find((section) => section.id === selectedSectionId.value) ?? null);
+const chainPreview = computed(() => (chainSteps.value.length ? chainSteps.value.join('  ->  ') : 'Hali zanjirli hisob yo\'q.'));
 
 const connect = () => {
     if (!props.wsUrl || !props.wsToken) {
@@ -137,6 +141,16 @@ const connect = () => {
             errorMessage.value = '';
             result.value = payload.entry.result;
             history.value = [payload.entry, ...history.value.filter((item) => item.id !== payload.entry.id)];
+
+            const step = `${payload.entry.left} ${payload.entry.operation} ${payload.entry.right} = ${payload.entry.result}`;
+            chainSteps.value = [...chainSteps.value, step].slice(-12);
+
+            if (chainMode.value) {
+                left.value = String(payload.entry.result);
+                right.value = '';
+                note.value = '';
+            }
+
             return;
         }
 
@@ -156,6 +170,8 @@ const connect = () => {
 
             if (sectionId === selectedSectionId.value) {
                 statusMessage.value = payload.message;
+                chainSteps.value = [];
+                result.value = null;
             }
 
             return;
@@ -217,6 +233,11 @@ const clearHistory = () => {
 const calculate = () => {
     errorMessage.value = '';
 
+    if (!selectedSectionId.value) {
+        errorMessage.value = 'Avval bo\'lim tanlang.';
+        return;
+    }
+
     sendPayload({
         action: 'calculate',
         operation: operation.value,
@@ -229,10 +250,21 @@ const calculate = () => {
 };
 
 const useEntry = (entry) => {
-    left.value = String(entry.left);
-    right.value = String(entry.right);
+    left.value = String(entry.result);
+    right.value = '';
     result.value = entry.result;
-    note.value = entry.note ?? '';
+    note.value = '';
+    errorMessage.value = '';
+};
+
+const continueWithResult = () => {
+    if (result.value === null) {
+        return;
+    }
+
+    left.value = String(result.value);
+    right.value = '';
+    errorMessage.value = '';
 };
 
 const formatTimestamp = (timestamp) => {
@@ -250,6 +282,7 @@ watch(selectedSectionId, (newSectionId, oldSectionId) => {
 
     result.value = null;
     errorMessage.value = '';
+    chainSteps.value = [];
     requestHistory();
     requestStats();
 });
@@ -310,6 +343,7 @@ onBeforeUnmount(() => {
                             class="rounded border-gray-300"
                             placeholder="Yangi bo'lim nomi"
                             maxlength="120"
+                            @keyup.enter="createSection"
                         >
 
                         <button
@@ -323,7 +357,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="rounded-lg bg-white p-6 shadow-sm space-y-4">
+                <form class="rounded-lg bg-white p-6 shadow-sm space-y-4" @submit.prevent="calculate">
                     <h3 class="text-lg font-semibold text-gray-900">Hisob-kitob</h3>
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -357,6 +391,7 @@ onBeforeUnmount(() => {
                             max="10"
                             step="1"
                             placeholder="Precision (0-10)"
+                            @keyup.enter="calculate"
                         >
                     </div>
 
@@ -366,14 +401,34 @@ onBeforeUnmount(() => {
                         rows="3"
                         maxlength="255"
                         placeholder="Zametka (masalan: Bugungi bozor harajati)"
+                        @keydown.enter.exact.prevent="calculate"
                     />
+
+                    <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <label class="inline-flex items-center gap-2">
+                                <input v-model="chainMode" type="checkbox" class="rounded border-gray-300">
+                                Natijani keyingi hisobga ulash
+                            </label>
+
+                            <button
+                                type="button"
+                                class="rounded border border-gray-300 px-3 py-1 text-xs text-gray-700 disabled:opacity-50"
+                                :disabled="result === null"
+                                @click="continueWithResult"
+                            >
+                                Natijani davom ettir
+                            </button>
+                        </div>
+
+                        <p class="mt-2 text-xs text-gray-500">{{ chainPreview }}</p>
+                    </div>
 
                     <div class="flex flex-wrap items-center gap-3">
                         <button
-                            type="button"
+                            type="submit"
                             class="rounded bg-gray-900 px-4 py-2 text-white disabled:cursor-not-allowed disabled:bg-gray-400"
                             :disabled="!canSend || !selectedSectionId"
-                            @click="calculate"
                         >
                             Calculate
                         </button>
@@ -410,7 +465,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <p v-if="errorMessage" class="text-sm text-red-600">{{ errorMessage }}</p>
-                </div>
+                </form>
 
                 <div class="rounded-lg bg-white p-6 shadow-sm">
                     <div class="mb-3 flex items-center justify-between">
@@ -436,7 +491,7 @@ onBeforeUnmount(() => {
                                     class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
                                     @click="useEntry(item)"
                                 >
-                                    Use
+                                    Use Result
                                 </button>
                             </div>
 
