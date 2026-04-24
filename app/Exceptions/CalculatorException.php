@@ -30,4 +30,14 @@ class CalculatorException extends RuntimeException
     {
         return new self('Precision must be an integer between 0 and 10.');
     }
+
+    public static function invalidSection(): self
+    {
+        return new self('Invalid calculation section.');
+    }
+
+    public static function invalidNote(): self
+    {
+        return new self('Note must be a string up to 255 characters.');
+    }
 }

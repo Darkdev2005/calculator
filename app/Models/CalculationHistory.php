@@ -12,10 +12,12 @@ class CalculationHistory extends Model
 
     protected $fillable = [
         'user_id',
+        'calculation_section_id',
         'operation',
         'operand_left',
         'operand_right',
         'result',
+        'note',
         'calculated_at',
     ];
 
@@ -32,5 +34,10 @@ class CalculationHistory extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(CalculationSection::class, 'calculation_section_id');
     }
 }

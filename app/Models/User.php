@@ -35,4 +35,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(CalculationHistory::class);
     }
+
+    public function calculationSections(): HasMany
+    {
+        return $this->hasMany(CalculationSection::class);
+    }
 }

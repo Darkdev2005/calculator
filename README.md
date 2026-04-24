@@ -19,6 +19,8 @@ Authenticated real-time calculator built with Laravel and Vue 3. Calculation ope
 - Real-time result/history updates across same user's open sessions
 - Precision control (`0..10`) for rounded results
 - Extra realtime actions: history clear and stats snapshot
+- Section-based calculations (default section: `Kundalik harajatlarim`)
+- Note support for each calculation entry
 
 ## Database schema
 
@@ -27,10 +29,20 @@ Table: `calculation_histories`
 - `id`
 - `user_id`
 - `operation`
+- `calculation_section_id`
 - `operand_left`
 - `operand_right`
 - `result`
+- `note`
 - `calculated_at`
+- `created_at`
+- `updated_at`
+
+Table: `calculation_sections`
+
+- `id`
+- `user_id`
+- `name`
 - `created_at`
 - `updated_at`
 
@@ -121,7 +133,9 @@ Client -> server messages:
   "operation": "add|subtract|multiply|divide|power|modulo",
   "left": 12,
   "right": 4,
-  "precision": 2
+  "precision": 2,
+  "section_id": 1,
+  "note": "Bugungi bozor harajati"
 }
 ```
 
@@ -130,6 +144,7 @@ Client -> server messages:
 ```json
 {
   "action": "history",
+  "section_id": 1,
   "limit": 20
 }
 ```
@@ -138,7 +153,8 @@ Client -> server messages:
 
 ```json
 {
-  "action": "history.clear"
+  "action": "history.clear",
+  "section_id": 1
 }
 ```
 
@@ -146,7 +162,25 @@ Client -> server messages:
 
 ```json
 {
-  "action": "stats"
+  "action": "stats",
+  "section_id": 1
+}
+```
+
+- Get sections:
+
+```json
+{
+  "action": "sections.list"
+}
+```
+
+- Create section:
+
+```json
+{
+  "action": "sections.create",
+  "name": "Kundalik harajatlarim"
 }
 ```
 
@@ -159,6 +193,8 @@ Server -> client messages:
 - `history.snapshot`
 - `history.cleared`
 - `stats.snapshot`
+- `sections.snapshot`
+- `section.created`
 
 ## Tests
 
@@ -175,6 +211,8 @@ Included edge cases:
 - invalid operation
 - non-numeric operands
 - invalid precision
+- invalid section
+- invalid note
 
 ## Security notes
 

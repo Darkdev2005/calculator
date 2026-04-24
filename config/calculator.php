@@ -2,6 +2,7 @@
 
 return [
     'token_ttl_seconds' => (int) env('CALCULATOR_WS_TOKEN_TTL', 3600),
+    'default_section_name' => env('CALCULATOR_DEFAULT_SECTION_NAME', 'Kundalik harajatlarim'),
 
     'websocket' => [
         'scheme' => env('CALCULATOR_WS_SCHEME', 'ws'),
