@@ -400,7 +400,7 @@ onBeforeUnmount(() => {
                         class="w-full rounded border-gray-300"
                         rows="3"
                         maxlength="255"
-                        placeholder="Zametka (masalan: Bugungi bozor harajati)"
+                        placeholder="Note (masalan: Bugungi bozor harajati)"
                         @keydown.enter.exact.prevent="calculate"
                     />
 
